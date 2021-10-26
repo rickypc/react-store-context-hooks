@@ -1,0 +1,179 @@
+{
+  "author": {
+    "email": "rickypc@users.noreply.github.com",
+    "name": "Richard Huang"
+  },
+  "babel": {
+    "plugins": [
+      "@babel/plugin-transform-runtime"
+    ],
+    "presets": [
+      "@babel/env",
+      "@babel/flow",
+      "@babel/react"
+    ]
+  },
+  "description": "Provides various data store hooks that allow functional components within the same React Context to share the application state.",
+  "devDependencies": {
+    "@airbnb/node-memwatch": "^2.0.0",
+    "@babel/core": "^7.15.8",
+    "@babel/eslint-parser": "^7.15.8",
+    "@babel/plugin-transform-runtime": "^7.15.8",
+    "@babel/preset-env": "^7.15.8",
+    "@babel/preset-flow": "^7.14.5",
+    "@babel/preset-react": "^7.14.5",
+    "@babel/register": "^7.15.3",
+    "@rollup/plugin-babel": "^5.3.0",
+    "@testing-library/react": "^12.1.2",
+    "benchmark": "^2.1.4",
+    "eslint": "7.32.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-flowtype": "^6.1.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jest": "^25.2.2",
+    "eslint-plugin-react": "^7.26.1",
+    "eslint-plugin-testing-library": "^4.12.4",
+    "flow-bin": "^0.162.1",
+    "flow-coverage-report": "^0.8.0",
+    "jest": "^27.3.1",
+    "jsdoc-babel": "^0.5.0",
+    "jsdoc-to-markdown": "^7.1.0",
+    "proxyquire": "^2.1.3",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "rollup": "^2.58.0",
+    "rollup-plugin-copy": "^3.4.0",
+    "rollup-plugin-delete": "^2.0.0",
+    "rollup-plugin-terser": "^7.0.2",
+    "tape": "^5.3.1",
+    "tsc-silent": "^1.2.1",
+    "typescript": "^4.4.4"
+  },
+  "eslintConfig": {
+    "env": {
+      "jest/globals": true,
+      "node": true
+    },
+    "extends": [
+      "airbnb-base",
+      "plugin:jest/recommended",
+      "plugin:react/recommended"
+    ],
+    "overrides": [
+      {
+        "extends": [
+          "plugin:testing-library/react"
+        ],
+        "files": [
+          "**/__tests__/**/*.js"
+        ]
+      }
+    ],
+    "parser": "@babel/eslint-parser",
+    "parserOptions": {
+      "ecmaFeatures": {
+        "jsx": true
+      }
+    },
+    "plugins": [
+      "import",
+      "jest",
+      "testing-library"
+    ],
+    "rules": {
+      "import/extensions": [
+        "error",
+        "ignorePackages"
+      ],
+      "import/no-extraneous-dependencies": [
+        "error",
+        {
+          "devDependencies": true
+        }
+      ],
+      "import/no-unresolved": [
+        2,
+        {
+          "ignore": [
+            "react"
+          ]
+        }
+      ],
+      "no-underscore-dangle": [
+        2,
+        {
+          "allow": [
+            "__test__"
+          ]
+        }
+      ]
+    },
+    "settings": {
+      "react": {
+        "version": "detect"
+      }
+    }
+  },
+  "files": [
+    "example.js",
+    "index.*.*"
+  ],
+  "homepage": "https://github.com/rickypc/react-store-context-hooks#readme",
+  "jest": {
+    "clearMocks": true,
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+      "src/index.js"
+    ],
+    "coverageDirectory": "./coverage/",
+    "errorOnDeprecated": true,
+    "logHeapUsage": true,
+    "modulePathIgnorePatterns": [
+      "<rootDir>/dist"
+    ],
+    "testEnvironment": "jsdom",
+    "testRegex": "__tests__/.*.test.js$"
+  },
+  "keywords": [
+    "store",
+    "data store",
+    "store context",
+    "store provider",
+    "share state",
+    "across components",
+    "functional components",
+    "share application state",
+    "application state",
+    "across React components",
+    "context",
+    "hooks",
+    "share",
+    "components"
+  ],
+  "license": "MPL-2.0",
+  "main": "index.cjs.js",
+  "module": "index.esm.js",
+  "name": "react-store-context-hooks",
+  "peerDependencies": {
+    "react": ">=16.8.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:rickypc/react-store-context-hooks.git"
+  },
+  "runkitExampleFilename": "example.js",
+  "scripts": {
+    "build": "yarn build:docs; yarn build:bundles; yarn build:ts",
+    "build:bundles": "rollup -c",
+    "build:docs": "jsdoc2md -c .jsdoc.json -t .readme.hbs src/*.js > README.md",
+    "build:ts": "tsc-silent --project tsconfig.json --suppress @",
+    "publish": "yarn build && npm publish ./dist",
+    "test": "yarn test:lint; yarn test:flow; yarn test:unit; yarn test:bench; yarn test:leak",
+    "test:bench": "time find __benches__ -name '*.test.js' -type f -print0 | sort -z | xargs -0 -I{} node --require @babel/register {}",
+    "test:flow": "flow check; flow batch-coverage --strip-root .; flow-coverage-report -i src/*.js -t html",
+    "test:leak": "time find __leaks__ -name '*.test.js' -type f -print0 | sort -z | xargs -0 -I{} node --require @babel/register {}",
+    "test:lint": "eslint __*__/** src/*.js; exit 0",
+    "test:unit": "jest"
+  },
+  "version": "1.0.0"
+}
