@@ -15,20 +15,20 @@ const {
   useStore,
   useStores,
   withStore,
-} = require('react-store-context-hook');
+} = require('react-store-context-hooks');
 
 // eslint-disable-next-line no-console
-['', 'value'].forEach((value) => console.log(`isEmpty('${value}') => `, isEmpty(value)));
+['', 'value'].forEach((value) => console.log(`isEmpty('${value}') => ${isEmpty(value)}`));
 
 const response = { renderedA: 0, renderedB: 0 };
 
 const App = withStore(() => {
   response.setStores = useStores().setStores;
   return (
-    <>
+    <React.Fragment>
       <CompA />
       <CompB />
-    </>
+    </React.Fragment>
   );
 });
 
@@ -36,7 +36,7 @@ const CompA = () => {
   response.renderedA += 1;
   [response.getA, response.setA, response.delA] = useStore('key');
   // eslint-disable-next-line no-console
-  console.log('Component A value => ', response.getA);
+  console.log(`Component A value => ${response.getA}`);
   return null;
 };
 
@@ -44,7 +44,7 @@ const CompB = () => {
   response.renderedB += 1;
   [response.getB, response.setB, response.delB] = useStore('key', 'defaultB');
   // eslint-disable-next-line no-console
-  console.log('Component B value => ', response.getB);
+  console.log(`Component B value => ${response.getB}`);
   return null;
 };
 
