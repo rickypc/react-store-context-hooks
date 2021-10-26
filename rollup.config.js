@@ -74,7 +74,7 @@ export default [
       }),
       copy({
         targets: [
-          { src: ['example.js', 'README.md'], dest: 'dist' },
+          { src: ['CHANGELOG.md', 'example.js', 'README.md'], dest: 'dist' },
         ],
       }),
       writePackage(pkg, 'dist/package.json'),
