@@ -1,0 +1,39 @@
+# validations.yml - Github actions for React store context hooks functionality.
+# Copyright (c) 2019 - 2021 Richard Huang <rickypc@users.noreply.github.com>
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+name: Validations
+on:
+  pull_request:
+    types: [ edited, opened, reopened, synchronize ]
+  push:
+    branches:
+      - master
+jobs:
+  checks:
+    name: Benchmark, Flow, Leak, Lint, Outdated, Unit Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14.x'
+      - name: Install dependencies
+        run: yarn
+      - name: Benchmark code
+        run: yarn test:bench
+      - name: Check code data types
+        run: npx flow check
+      - name: Check memory leak
+        run: yarn test:leak
+      - name: Static analyze code
+        run: npx eslint __*__/**/*.js src/*.js
+      - name: Check outdated dependencies
+        run: yarn outdated
+      - name: Check code functionality
+        run: npx jest --no-coverage
