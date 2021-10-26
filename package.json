@@ -167,7 +167,6 @@
     "build:bundles": "rollup -c",
     "build:docs": "jsdoc2md -c .jsdoc.json -t .readme.hbs src/*.js > README.md",
     "build:ts": "tsc-silent --project tsconfig.json --suppress @",
-    "publish": "yarn build && npm publish ./dist",
     "test": "yarn test:lint; yarn test:flow; yarn test:unit; yarn test:bench; yarn test:leak",
     "test:bench": "time find __benches__ -name '*.test.js' -type f -print0 | sort -z | xargs -0 -I{} node --require @babel/register {}",
     "test:flow": "flow check; flow batch-coverage --strip-root .; flow-coverage-report -i src/*.js -t html",
@@ -175,5 +174,5 @@
     "test:lint": "eslint __*__/** src/*.js; exit 0",
     "test:unit": "jest"
   },
-  "version": "1.1.0"
+  "version": "1.1.1"
 }

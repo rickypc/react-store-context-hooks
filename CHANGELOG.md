@@ -1,3 +1,8 @@
+### 1.1.1 (2021.10.25)
+
+* Github actions to generate coverage file.
+* Minor Runkit example adjustments.
+
 ### 1.1.0 (2021.10.25)
 
 * Add README.md
