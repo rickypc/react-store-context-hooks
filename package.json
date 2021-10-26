@@ -114,10 +114,6 @@
       }
     }
   },
-  "files": [
-    "example.js",
-    "index.*.*"
-  ],
   "homepage": "https://github.com/rickypc/react-store-context-hooks#readme",
   "jest": {
     "clearMocks": true,
@@ -174,5 +170,5 @@
     "test:lint": "eslint __*__/** src/*.js; exit 0",
     "test:unit": "jest"
   },
-  "version": "1.1.1"
+  "version": "1.1.2"
 }
