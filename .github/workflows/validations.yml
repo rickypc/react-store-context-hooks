@@ -37,3 +37,7 @@ jobs:
         run: yarn outdated
       - name: Check code functionality
         run: npx jest --no-coverage
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          flags: unittests
