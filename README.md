@@ -40,11 +40,68 @@ Provides various data store hooks that allow functional components within
 the same React Context to share the application state.
 
 **Requires**: <code>module:react</code>  
+**Example**  
+```js
+import { isEmpty, useStore, useStores, withStore } from 'react-store-context-hooks';
+import { useEffect } from 'react';
+import { render } from 'react-dom';
+
+const ComponentA = () => {
+  const [value, setValue, delValue] = useStore('key');
+
+  useEffect(() => {
+    if (isEmpty(value)) {
+      setValue({ key: {
+        nested: 'value-from-A',
+      } });
+    }
+    return () => delValue();
+  }, []);
+
+  return <>{JSON.stringify(value)}<>;
+};
+
+const ComponentB = () => {
+  const [value, setValue, delValue] = useStore('key');
+
+  useEffect(() => {
+    if (isEmpty(value)) {
+      setValue({ key: {
+        nested: 'value-from-B',
+      } });
+    }
+    return () => delValue();
+  }, []);
+
+  return <>{JSON.stringify(value)}<>;
+};
+
+const App = withStore(() => {
+  const { setStores } = useStores();
+
+  useEffect(() => {
+    setStores({
+      key: {
+        nested: 'value',
+      },
+    });
+  }, []);
+
+  return (
+    <>
+      <ComponentA />
+      <ComponentB />
+    </>
+  );
+});
+
+render(<App />, document.querySelector('#root'));
+```
 
 * [react-store-context-hooks](#module_react-store-context-hooks)
     * [.isEmpty(value)](#module_react-store-context-hooks.isEmpty) ⇒ <code>boolean</code>
-    * [.useStore(key, defaultValue)](#module_react-store-context-hooks.useStore) ⇒ <code>Array.&lt;mixed, function(value): void, function(): void&gt;</code>
-    * [.useStores()](#module_react-store-context-hooks.useStores) ⇒ <code>Object.&lt;{setStores: function(data): void}&gt;</code>
+    * [.useStore(key, defaultValue, persistence)](#module_react-store-context-hooks.useStore) ⇒ <code>Array.&lt;mixed, function(value): void, function(): void&gt;</code>
+    * [.useStores(persistence)](#module_react-store-context-hooks.useStores) ⇒ <code>Object.&lt;{setStores: function(data): void}&gt;</code>
     * [.withStores(Component)](#module_react-store-context-hooks.withStores) ⇒ <code>React.ComponentType</code>
 
 <a name="module_react-store-context-hooks.isEmpty"></a>
@@ -63,15 +120,22 @@ emptiness.
 **Example**  
 ```js
 let flag = isEmpty('');
-// flag = true.
+// flag = true
 flag = isEmpty('value');
-// flag = false.
+// flag = false
 ```
 <a name="module_react-store-context-hooks.useStore"></a>
 
-### react-store-context-hooks.useStore(key, defaultValue) ⇒ <code>Array.&lt;mixed, function(value): void, function(): void&gt;</code>
+### react-store-context-hooks.useStore(key, defaultValue, persistence) ⇒ <code>Array.&lt;mixed, function(value): void, function(): void&gt;</code>
 A data store hook that allows any components within the same React Context
 to share the application state.
+
+The accessor will validate the value in the data store first before
+accessing the given persistent storage. If both data store
+and persistent storage values are empty, it will use the default value.
+
+The mutators will persist the value with JSON string format
+in the persistent storage.
 
 **Kind**: static method of [<code>react-store-context-hooks</code>](#module_react-store-context-hooks)  
 **Returns**: <code>Array.&lt;mixed, function(value): void, function(): void&gt;</code> - Store value, update, and remove callbacks.  
@@ -80,40 +144,181 @@ to share the application state.
 | --- | --- | --- |
 | key | <code>string</code> | The store key. |
 | defaultValue | <code>mixed</code> | The store default value. |
+| persistence | <code>Storage</code> | The data persistence choices: localStorage, sessionStorage. |
 
-**Example**  
+**Example** *(Without persistent storage)*  
 ```js
-const [store, setStore, delStore] = useStore('key', 'default');
-// store = 'default'.
+import { useEffect } from 'react';
+import { useStore }  from 'react-store-context-hooks';
 
-setStore('value');
-// store = 'value'.
+const Component = () => {
+  const [store, setStore, delStore] = useStore('key', 'default');
+  // store = 'default'
 
-delStore();
-// store = 'default'.
+  useEffect(() => {
+    setStore('value');
+    // store = 'value'
+
+    return () => {
+      delStore();
+      // store = 'default'
+    };
+  }, []);
+};
+```
+**Example** *(With localStorage)*  
+```js
+import { useEffect } from 'react';
+import { useStore }  from 'react-store-context-hooks';
+
+// Simulate an existing value
+localStorage.setItem('key', JSON.stringify('local-default'));
+
+const Component = () => {
+  const [store, setStore, delStore] = useStore('key', 'default', localStorage);
+  // store = 'local-default'
+  // localStorage.getItem('key') = '"local-default"'
+
+  useEffect(() => {
+    setStore('value');
+    // store = 'value'
+    // localStorage.getItem('key') = '"value"'
+
+    return () => {
+      delStore();
+      // store = 'default'
+      // localStorage.getItem('key') = null
+    };
+  }, []);
+};
+```
+**Example** *(With sessionStorage)*  
+```js
+import { useEffect } from 'react';
+import { useStore }  from 'react-store-context-hooks';
+
+// Simulate an existing value
+sessionStorage.setItem('key', JSON.stringify('session-default'));
+
+const Component = () => {
+  const [store, setStore, delStore] = useStore('key', 'default', sessionStorage);
+  // store = 'session-default'
+  // sessionStorage.getItem('key') = '"session-default"'
+
+  useEffect(() => {
+    setStore('value');
+    // store = 'value'
+    // sessionStorage.getItem('key') = '"value"'
+
+    return () => {
+      delStore();
+      // store = 'default'
+      // sessionStorage.getItem('key') = null
+    };
+  }, []);
+};
 ```
 <a name="module_react-store-context-hooks.useStores"></a>
 
-### react-store-context-hooks.useStores() ⇒ <code>Object.&lt;{setStores: function(data): void}&gt;</code>
+### react-store-context-hooks.useStores(persistence) ⇒ <code>Object.&lt;{setStores: function(data): void}&gt;</code>
 A data store hook that allows a functional component to update multiple
 stores at once and share the application state with any components within
 the same React Context.
 
+The mutator will persist the values with JSON string format
+in the persistent storage.
+
 **Kind**: static method of [<code>react-store-context-hooks</code>](#module_react-store-context-hooks)  
 **Returns**: <code>Object.&lt;{setStores: function(data): void}&gt;</code> - Multiple stores update callback.  
-**Example**  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| persistence | <code>Storage</code> | The data persistence choices: localStorage, sessionStorage. |
+
+**Example** *(Without persistent storage)*  
 ```js
-const [store1] = useStore('key1');
-const [store2] = useStore('key2');
+import { useEffect } from 'react';
+import { useStore }  from 'react-store-context-hooks';
 
-const { setStores } = useStores();
+const Component = () => {
+  const [store1] = useStore('key1');
+  const [store2] = useStore('key2');
+  const { setStores } = useStores();
 
-setStore({
-  key1: 'value1',
-  key2: 'value2',
-});
-// store1 = 'value1'.
-// store2 = 'value2'.
+  useEffect(() => {
+    setStore({
+      key1: 'value1',
+      key2: {
+        nested: 'value',
+      },
+    });
+  }, []);
+
+  // store1 = 'value1'
+  // store2 = {
+  //   nested: 'value',
+  // }
+
+  return <>{JSON.stringify({ store1, store2 })}</>;
+};
+```
+**Example** *(With localStorage)*  
+```js
+import { useEffect } from 'react';
+import { useStore }  from 'react-store-context-hooks';
+
+const Component = () => {
+  const [store1] = useStore('key1', undefined, localStorage);
+  const [store2] = useStore('key2', undefined, localStorage);
+  const { setStores } = useStores(localStorage);
+
+  useEffect(() => {
+    setStore({
+      key1: 'value1',
+      key2: {
+        nested: 'value',
+      },
+    });
+  }, []);
+
+  // store1 = 'value1'
+  // store2 = {
+  //   nested: 'value',
+  // }
+  // localStorage.getItem('key1') = '"value1"'
+  // localStorage.getItem('key2') = '{"nested":"value"}'
+
+  return <>{JSON.stringify({ store1, store2 })}</>;
+};
+```
+**Example** *(With sessionStorage)*  
+```js
+import { useEffect } from 'react';
+import { useStore }  from 'react-store-context-hooks';
+
+const Component = () => {
+  const [store1] = useStore('key1', undefined, sessionStorage);
+  const [store2] = useStore('key2', undefined, sessionStorage);
+  const { setStores } = useStores(sessionStorage);
+
+  useEffect(() => {
+    setStore({
+      key1: 'value1',
+      key2: {
+        nested: 'value',
+      },
+    });
+  }, []);
+
+  // store1 = 'value1'
+  // store2 = {
+  //   nested: 'value',
+  // }
+  // sessionStorage.getItem('key1') = '"value1"'
+  // sessionStorage.getItem('key2') = '{"nested":"value"}'
+
+  return <>{JSON.stringify({ store1, store2 })}</>;
+};
 ```
 <a name="module_react-store-context-hooks.withStores"></a>
 
@@ -127,10 +332,29 @@ A data store hook that wraps a component with a store context provider.
 | --- | --- | --- |
 | Component | <code>React.ComponentType</code> | The component to be wrapped with the store provider. |
 
-**Example**  
+**Example** *(Wrap an existing component)*  
 ```js
+import { render }  from 'react-dom';
+import { withStore }  from 'react-store-context-hooks';
+
+const Component = (props) => {
+  return <>{JSON.stringify(props)}</>;
+};
+
 const ComponentWithStore = withStore(Component);
-return <ComponentWithStore {...props} />;
+
+render(<ComponentWithStore attr1="val1" attr2="val2" />, document.querySelector('#root'));
+```
+**Example** *(Wrap a component on-the-fly)*  
+```js
+import { render }  from 'react-dom';
+import { withStore }  from 'react-store-context-hooks';
+
+const ComponentWithStore = withStore((props) => {
+  return <>{JSON.stringify(props)}</>;
+});
+
+render(<ComponentWithStore attr1="val1" attr2="val2" />, document.querySelector('#root'));
 ```
 
 Development Dependencies
