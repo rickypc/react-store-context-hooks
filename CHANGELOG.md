@@ -1,3 +1,9 @@
+### 2.0.0 (2021.10.31)
+
+* Add persistent storage support.
+* Adjust documentation.
+* Delete value adjustment.
+
 ### 1.1.2 (2021.10.25)
 
 * Add license file.
@@ -11,7 +17,7 @@
 
 * Add README.md.
 * Update dependencies.
-* Add uppload to Codecov from Github actions.
+* Add upload to Codecov from Github actions.
 
 ### 1.0.0 (2021.10.25)
 
