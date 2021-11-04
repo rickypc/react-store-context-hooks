@@ -1,3 +1,8 @@
+### 3.0.0 (2021.11.03)
+
+* Add useLocalStore and useSessionStore
+* Adjust documentation.
+
 ### 2.0.0 (2021.10.31)
 
 * Add persistent storage support.
