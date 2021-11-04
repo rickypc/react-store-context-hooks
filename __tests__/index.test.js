@@ -9,6 +9,8 @@ import { act, render } from '@testing-library/react';
 import React, { useMemo } from 'react';
 import {
   isEmpty,
+  useLocalStore,
+  useSessionStore,
   useStore,
   useStores,
   withStore,
@@ -56,6 +58,952 @@ describe('React store context hooks module test', () => {
       const actual = isEmpty(value);
 
       expect(actual).toBeFalsy();
+    });
+  });
+
+  describe('useLocalStore', () => {
+    it('should return expected value for undefined', () => {
+      // Remove previous test value.
+      global.localStorage.removeItem('key');
+      localRemove.mockClear();
+
+      const response = { renderedA: 0, renderedB: 0, renderedC: 0 };
+      const value = undefined;
+
+      const A = () => {
+        response.renderedA += 1;
+        [response.getA, response.setA, response.delA] = useLocalStore('key');
+        return null;
+      };
+      const B = () => {
+        response.renderedB += 1;
+        [response.getB, response.setB, response.delB] = useLocalStore('key');
+        return null;
+      };
+      const C = () => {
+        response.renderedC += 1;
+        [response.getC, response.setC, response.delC] = useLocalStore('key2');
+        return null;
+      };
+      render(<><A /><B /><C /></>);
+
+      // Initial value check.
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(3);
+      // Component A render.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component B render.
+      expect(localGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component C render.
+      expect(localGet).toHaveBeenNthCalledWith(3, 'key2');
+      localGet.mockClear();
+
+      // Post-write value check.
+      act(() => response.setA(value));
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(1);
+      // Update check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localSet).toHaveBeenCalledTimes(1);
+      expect(localSet).toHaveBeenNthCalledWith(1, 'key', value);
+      localGet.mockClear();
+      localSet.mockClear();
+
+      // Ignore same value write check.
+      act(() => response.setB(value));
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(1);
+      // Update check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localSet).toHaveBeenCalledTimes(1);
+      expect(localSet).toHaveBeenNthCalledWith(1, 'key', value);
+      localGet.mockClear();
+      localSet.mockClear();
+
+      // Post-delete value check.
+      act(() => response.delA());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localRemove).toHaveBeenCalledTimes(1);
+      expect(localRemove).toHaveBeenNthCalledWith(1, 'key');
+      localGet.mockClear();
+      localRemove.mockClear();
+
+      // Ignore non-existence delete check.
+      act(() => response.delB());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localRemove).not.toHaveBeenCalled();
+    });
+
+    it.each`
+      value
+      ${null}
+      ${false}
+      ${0}
+      ${''}
+      ${[]}
+      ${{}}
+      ${true}
+      ${1}
+      ${-1}
+      ${'string'}
+      ${[1, 2, 3]}
+      ${{ 1: 2 }}
+      ${{ k: 'v' }}
+    `('should return expected value for $value', ({ value }) => {
+      // Remove previous test value.
+      global.localStorage.removeItem('key');
+      localRemove.mockClear();
+
+      const response = { renderedA: 0, renderedB: 0, renderedC: 0 };
+
+      const A = () => {
+        response.renderedA += 1;
+        [response.getA, response.setA, response.delA] = useLocalStore('key');
+        return null;
+      };
+      const B = () => {
+        response.renderedB += 1;
+        [response.getB, response.setB, response.delB] = useLocalStore('key');
+        return null;
+      };
+      const C = () => {
+        response.renderedC += 1;
+        [response.getC, response.setC, response.delC] = useLocalStore('key2');
+        return null;
+      };
+      render(<><A /><B /><C /></>);
+
+      // Initial value check.
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(3);
+      // Component A render.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component B render.
+      expect(localGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component C render.
+      expect(localGet).toHaveBeenNthCalledWith(3, 'key2');
+      localGet.mockClear();
+
+      // Post-write value check.
+      act(() => response.setA(value));
+      expect(response.getA).toEqual(value);
+      expect(response.getB).toEqual(value);
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(2);
+      expect(response.renderedB).toEqual(2);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(3);
+      // Update check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component A render.
+      expect(localGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component B render.
+      expect(localGet).toHaveBeenNthCalledWith(3, 'key');
+      expect(localSet).toHaveBeenCalledTimes(1);
+      expect(localSet).toHaveBeenNthCalledWith(1, 'key', JSON.stringify(value));
+      localGet.mockClear();
+      localSet.mockClear();
+
+      // Ignore same value write check.
+      act(() => response.setB(value));
+      expect(response.getA).toEqual(value);
+      expect(response.getB).toEqual(value);
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(2);
+      expect(response.renderedB).toEqual(2);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(1);
+      // Update check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localSet).not.toHaveBeenCalled();
+      localGet.mockClear();
+
+      // Post-delete value check.
+      act(() => response.delA());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(3);
+      expect(response.renderedB).toEqual(3);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(3);
+      // Delete check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component A render.
+      expect(localGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component B render.
+      expect(localGet).toHaveBeenNthCalledWith(3, 'key');
+      expect(localRemove).toHaveBeenCalledTimes(1);
+      expect(localRemove).toHaveBeenNthCalledWith(1, 'key');
+      localGet.mockClear();
+      localRemove.mockClear();
+
+      // Ignore non-existence delete check.
+      act(() => response.delB());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(3);
+      expect(response.renderedB).toEqual(3);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localRemove).not.toHaveBeenCalled();
+    });
+
+    it.each`
+      value
+      ${undefined}
+      ${null}
+      ${false}
+      ${0}
+      ${''}
+      ${[]}
+      ${{}}
+      ${true}
+      ${1}
+      ${-1}
+      ${'string'}
+      ${[1, 2, 3]}
+      ${{ 1: 2 }}
+      ${{ k: 'v' }}
+    `('should return default value for $value', ({ value }) => {
+      // Remove previous test value.
+      global.localStorage.removeItem('key');
+      localRemove.mockClear();
+
+      const response = { renderedA: 0, renderedB: 0, renderedC: 0 };
+
+      const A = () => {
+        response.renderedA += 1;
+        [response.getA, response.setA, response.delA] = useLocalStore('key', value);
+        return null;
+      };
+      const B = () => {
+        response.renderedB += 1;
+        [response.getB, response.setB, response.delB] = useLocalStore('key', value);
+        return null;
+      };
+      const C = () => {
+        response.renderedC += 1;
+        [response.getC, response.setC, response.delC] = useLocalStore('key2');
+        return null;
+      };
+      render(<><A /><B /><C /></>);
+
+      // Initial value check.
+      expect(response.getA).toEqual(value);
+      expect(response.getB).toEqual(value);
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(3);
+      // Component A render.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component B render.
+      expect(localGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component C render.
+      expect(localGet).toHaveBeenNthCalledWith(3, 'key2');
+      localGet.mockClear();
+
+      // Post-delete value check.
+      act(() => response.delA());
+      expect(response.getA).toEqual(value);
+      expect(response.getB).toEqual(value);
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localRemove).not.toHaveBeenCalled();
+      localGet.mockClear();
+
+      // Ignore non-existence delete check.
+      act(() => response.delB());
+      expect(response.getA).toEqual(value);
+      expect(response.getB).toEqual(value);
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localRemove).not.toHaveBeenCalled();
+    });
+
+    it('should return localStorage existing value for undefined', () => {
+      const value = undefined;
+
+      // Reset previous test value.
+      global.localStorage.setItem('key', JSON.stringify(value));
+      localSet.mockClear();
+
+      const response = { renderedA: 0, renderedB: 0, renderedC: 0 };
+
+      const A = () => {
+        response.renderedA += 1;
+        [response.getA, response.setA, response.delA] = useLocalStore('key', value);
+        return null;
+      };
+      const B = () => {
+        response.renderedB += 1;
+        [response.getB, response.setB, response.delB] = useLocalStore('key', value);
+        return null;
+      };
+      const C = () => {
+        response.renderedC += 1;
+        [response.getC, response.setC, response.delC] = useLocalStore('key2');
+        return null;
+      };
+      render(<><A /><B /><C /></>);
+
+      // Initial value check.
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(3);
+      // Component A render.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component B render.
+      expect(localGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component C render.
+      expect(localGet).toHaveBeenNthCalledWith(3, 'key2');
+      localGet.mockClear();
+
+      // Post-delete value check.
+      act(() => response.delA());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localRemove).toHaveBeenCalledTimes(1);
+      expect(localRemove).toHaveBeenNthCalledWith(1, 'key');
+      localGet.mockClear();
+      localRemove.mockClear();
+
+      // Ignore non-existence delete check.
+      act(() => response.delB());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localRemove).not.toHaveBeenCalled();
+    });
+
+    it.each`
+      value
+      ${null}
+      ${false}
+      ${0}
+      ${''}
+      ${[]}
+      ${{}}
+      ${true}
+      ${1}
+      ${-1}
+      ${'string'}
+      ${[1, 2, 3]}
+      ${{ 1: 2 }}
+      ${{ k: 'v' }}
+    `('should return localStorage existing value for $value', ({ value }) => {
+      // Reset previous test value.
+      global.localStorage.setItem('key', JSON.stringify(value));
+      localSet.mockClear();
+
+      const response = { renderedA: 0, renderedB: 0, renderedC: 0 };
+
+      const A = () => {
+        response.renderedA += 1;
+        [response.getA, response.setA, response.delA] = useLocalStore('key', value);
+        return null;
+      };
+      const B = () => {
+        response.renderedB += 1;
+        [response.getB, response.setB, response.delB] = useLocalStore('key', value);
+        return null;
+      };
+      const C = () => {
+        response.renderedC += 1;
+        [response.getC, response.setC, response.delC] = useLocalStore('key2');
+        return null;
+      };
+      render(<><A /><B /><C /></>);
+
+      // Initial value check.
+      expect(response.getA).toEqual(value);
+      expect(response.getB).toEqual(value);
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(3);
+      // Component A render.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component B render.
+      expect(localGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component C render.
+      expect(localGet).toHaveBeenNthCalledWith(3, 'key2');
+      localGet.mockClear();
+
+      // Post-delete value check.
+      act(() => response.delA());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(2);
+      expect(response.renderedB).toEqual(2);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(3);
+      // Delete check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component A render.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component B render.
+      expect(localGet).toHaveBeenNthCalledWith(2, 'key');
+      expect(localRemove).toHaveBeenCalledTimes(1);
+      expect(localRemove).toHaveBeenNthCalledWith(1, 'key');
+      localGet.mockClear();
+      localRemove.mockClear();
+
+      // Ignore non-existence delete check.
+      act(() => response.delB());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(2);
+      expect(response.renderedB).toEqual(2);
+      expect(response.renderedC).toEqual(1);
+      expect(localGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localRemove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('useSessionStore', () => {
+    it('should return expected value for undefined', () => {
+      // Remove previous test value.
+      global.sessionStorage.removeItem('key');
+      sessionRemove.mockClear();
+
+      const response = { renderedA: 0, renderedB: 0, renderedC: 0 };
+      const value = undefined;
+
+      const A = () => {
+        response.renderedA += 1;
+        [response.getA, response.setA, response.delA] = useSessionStore('key');
+        return null;
+      };
+      const B = () => {
+        response.renderedB += 1;
+        [response.getB, response.setB, response.delB] = useSessionStore('key');
+        return null;
+      };
+      const C = () => {
+        response.renderedC += 1;
+        [response.getC, response.setC, response.delC] = useLocalStore('key2');
+        return null;
+      };
+      render(<><A /><B /><C /></>);
+
+      // Initial value check.
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(3);
+      // Component A render.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component B render.
+      expect(sessionGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component C render.
+      expect(localGet).toHaveBeenNthCalledWith(3, 'key2');
+      sessionGet.mockClear();
+
+      // Post-write value check.
+      act(() => response.setA(value));
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      // Update check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionSet).toHaveBeenCalledTimes(1);
+      expect(sessionSet).toHaveBeenNthCalledWith(1, 'key', JSON.stringify(value));
+      sessionGet.mockClear();
+      sessionSet.mockClear();
+
+      // Ignore same value write check.
+      act(() => response.setB(value));
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      // Update check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionSet).toHaveBeenCalledTimes(1);
+      expect(sessionSet).toHaveBeenNthCalledWith(1, 'key', JSON.stringify(value));
+      sessionGet.mockClear();
+      sessionSet.mockClear();
+
+      // Post-delete value check.
+      act(() => response.delA());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionRemove).toHaveBeenCalledTimes(1);
+      expect(sessionRemove).toHaveBeenNthCalledWith(1, 'key');
+      sessionGet.mockClear();
+      sessionRemove.mockClear();
+
+      // Ignore non-existence delete check.
+      act(() => response.delB());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionRemove).not.toHaveBeenCalled();
+    });
+
+    it.each`
+      value
+      ${null}
+      ${false}
+      ${0}
+      ${''}
+      ${[]}
+      ${{}}
+      ${true}
+      ${1}
+      ${-1}
+      ${'string'}
+      ${[1, 2, 3]}
+      ${{ 1: 2 }}
+      ${{ k: 'v' }}
+    `('should return expected value for $value', ({ value }) => {
+      // Remove previous test value.
+      global.sessionStorage.removeItem('key');
+      sessionRemove.mockClear();
+
+      const response = { renderedA: 0, renderedB: 0, renderedC: 0 };
+
+      const A = () => {
+        response.renderedA += 1;
+        [response.getA, response.setA, response.delA] = useSessionStore('key');
+        return null;
+      };
+      const B = () => {
+        response.renderedB += 1;
+        [response.getB, response.setB, response.delB] = useSessionStore('key');
+        return null;
+      };
+      const C = () => {
+        response.renderedC += 1;
+        [response.getC, response.setC, response.delC] = useLocalStore('key2');
+        return null;
+      };
+      render(<><A /><B /><C /></>);
+
+      // Initial value check.
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(3);
+      // Component A render.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component B render.
+      expect(sessionGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component C render.
+      expect(sessionGet).toHaveBeenNthCalledWith(3, 'key2');
+      sessionGet.mockClear();
+
+      // Post-write value check.
+      act(() => response.setA(value));
+      expect(response.getA).toEqual(value);
+      expect(response.getB).toEqual(value);
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(2);
+      expect(response.renderedB).toEqual(2);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(3);
+      // Update check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component A render.
+      expect(sessionGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component B render.
+      expect(sessionGet).toHaveBeenNthCalledWith(3, 'key');
+      expect(sessionSet).toHaveBeenCalledTimes(1);
+      expect(sessionSet).toHaveBeenNthCalledWith(1, 'key', JSON.stringify(value));
+      sessionGet.mockClear();
+      sessionSet.mockClear();
+
+      // Ignore same value write check.
+      act(() => response.setB(value));
+      expect(response.getA).toEqual(value);
+      expect(response.getB).toEqual(value);
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(2);
+      expect(response.renderedB).toEqual(2);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      // Update check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionSet).not.toHaveBeenCalled();
+      sessionGet.mockClear();
+
+      // Post-delete value check.
+      act(() => response.delA());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(3);
+      expect(response.renderedB).toEqual(3);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(3);
+      // Delete check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component A render.
+      expect(sessionGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component B render.
+      expect(sessionGet).toHaveBeenNthCalledWith(3, 'key');
+      expect(sessionRemove).toHaveBeenCalledTimes(1);
+      expect(sessionRemove).toHaveBeenNthCalledWith(1, 'key');
+      sessionGet.mockClear();
+      sessionRemove.mockClear();
+
+      // Ignore non-existence delete check.
+      act(() => response.delB());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(3);
+      expect(response.renderedB).toEqual(3);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionRemove).not.toHaveBeenCalled();
+    });
+
+    it.each`
+      value
+      ${undefined}
+      ${null}
+      ${false}
+      ${0}
+      ${''}
+      ${[]}
+      ${{}}
+      ${true}
+      ${1}
+      ${-1}
+      ${'string'}
+      ${[1, 2, 3]}
+      ${{ 1: 2 }}
+      ${{ k: 'v' }}
+    `('should return default value for $value', ({ value }) => {
+      // Remove previous test value.
+      global.sessionStorage.removeItem('key');
+      sessionRemove.mockClear();
+
+      const response = { renderedA: 0, renderedB: 0, renderedC: 0 };
+
+      const A = () => {
+        response.renderedA += 1;
+        [response.getA, response.setA, response.delA] = useSessionStore('key', value);
+        return null;
+      };
+      const B = () => {
+        response.renderedB += 1;
+        [response.getB, response.setB, response.delB] = useSessionStore('key', value);
+        return null;
+      };
+      const C = () => {
+        response.renderedC += 1;
+        [response.getC, response.setC, response.delC] = useLocalStore('key2');
+        return null;
+      };
+      render(<><A /><B /><C /></>);
+
+      // Initial value check.
+      expect(response.getA).toEqual(value);
+      expect(response.getB).toEqual(value);
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(3);
+      // Component A render.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component B render.
+      expect(sessionGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component C render.
+      expect(sessionGet).toHaveBeenNthCalledWith(3, 'key2');
+      sessionGet.mockClear();
+
+      // Post-delete value check.
+      act(() => response.delA());
+      expect(response.getA).toEqual(value);
+      expect(response.getB).toEqual(value);
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionRemove).not.toHaveBeenCalled();
+      sessionGet.mockClear();
+
+      // Ignore non-existence delete check.
+      act(() => response.delB());
+      expect(response.getA).toEqual(value);
+      expect(response.getB).toEqual(value);
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionRemove).not.toHaveBeenCalled();
+    });
+
+    it('should return sessionStorage existing value for undefined', () => {
+      const value = undefined;
+
+      // Reset previous test value.
+      global.sessionStorage.setItem('key', JSON.stringify(value));
+      sessionSet.mockClear();
+
+      const response = { renderedA: 0, renderedB: 0, renderedC: 0 };
+
+      const A = () => {
+        response.renderedA += 1;
+        [response.getA, response.setA, response.delA] = useSessionStore('key', value);
+        return null;
+      };
+      const B = () => {
+        response.renderedB += 1;
+        [response.getB, response.setB, response.delB] = useSessionStore('key', value);
+        return null;
+      };
+      const C = () => {
+        response.renderedC += 1;
+        [response.getC, response.setC, response.delC] = useLocalStore('key2');
+        return null;
+      };
+      render(<><A /><B /><C /></>);
+
+      // Initial value check.
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(3);
+      // Component A render.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component B render.
+      expect(sessionGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component C render.
+      expect(sessionGet).toHaveBeenNthCalledWith(3, 'key2');
+      sessionGet.mockClear();
+
+      // Post-delete value check.
+      act(() => response.delA());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionRemove).toHaveBeenCalledTimes(1);
+      expect(sessionRemove).toHaveBeenNthCalledWith(1, 'key');
+      sessionGet.mockClear();
+      sessionRemove.mockClear();
+
+      // Ignore non-existence delete check.
+      act(() => response.delB());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionRemove).not.toHaveBeenCalled();
+    });
+
+    it.each`
+      value
+      ${null}
+      ${false}
+      ${0}
+      ${''}
+      ${[]}
+      ${{}}
+      ${true}
+      ${1}
+      ${-1}
+      ${'string'}
+      ${[1, 2, 3]}
+      ${{ 1: 2 }}
+      ${{ k: 'v' }}
+    `('should return sessionStorage existing value for $value', ({ value }) => {
+      // Reset previous test value.
+      global.sessionStorage.setItem('key', JSON.stringify(value));
+      sessionSet.mockClear();
+
+      const response = { renderedA: 0, renderedB: 0, renderedC: 0 };
+
+      const A = () => {
+        response.renderedA += 1;
+        [response.getA, response.setA, response.delA] = useSessionStore('key', value);
+        return null;
+      };
+      const B = () => {
+        response.renderedB += 1;
+        [response.getB, response.setB, response.delB] = useSessionStore('key', value);
+        return null;
+      };
+      const C = () => {
+        response.renderedC += 1;
+        [response.getC, response.setC, response.delC] = useLocalStore('key2');
+        return null;
+      };
+      render(<><A /><B /><C /></>);
+
+      // Initial value check.
+      expect(response.getA).toEqual(value);
+      expect(response.getB).toEqual(value);
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(1);
+      expect(response.renderedB).toEqual(1);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(3);
+      // Component A render.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component B render.
+      expect(sessionGet).toHaveBeenNthCalledWith(2, 'key');
+      // Component C render.
+      expect(sessionGet).toHaveBeenNthCalledWith(3, 'key2');
+      sessionGet.mockClear();
+
+      // Post-delete value check.
+      act(() => response.delA());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(2);
+      expect(response.renderedB).toEqual(2);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(3);
+      // Delete check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component A render.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      // Component B render.
+      expect(sessionGet).toHaveBeenNthCalledWith(2, 'key');
+      expect(sessionRemove).toHaveBeenCalledTimes(1);
+      expect(sessionRemove).toHaveBeenNthCalledWith(1, 'key');
+      sessionGet.mockClear();
+      sessionRemove.mockClear();
+
+      // Ignore non-existence delete check.
+      act(() => response.delB());
+      expect(response.getA).toBeUndefined();
+      expect(response.getB).toBeUndefined();
+      expect(response.getC).toBeUndefined();
+      expect(response.renderedA).toEqual(2);
+      expect(response.renderedB).toEqual(2);
+      expect(response.renderedC).toEqual(1);
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      // Delete check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionRemove).not.toHaveBeenCalled();
     });
   });
 
