@@ -15,9 +15,41 @@ const context = {
   set() {},
   sets() {},
 };
+const events = {};
+
+class Storage {
+  constructor() {
+    this.data = {};
+  }
+
+  getItem(key) {
+    return this.data[key];
+  }
+
+  removeItem(key) {
+    delete this.data[key];
+  }
+
+  setItem(key, value) {
+    this.data[key] = value;
+  }
+}
+
+global.document = {
+  addEventListener(topic, listener) {
+    events[topic] = listener;
+  },
+  dispatchEvent: (e) => events[e.type](e),
+  removeEventListener: (topic) => delete events[topic],
+};
+global.localStorage = new Storage();
+global.sessionStorage = new Storage();
+global.Storage = Storage;
 
 const {
   isEmpty,
+  useLocalStore,
+  useSessionStore,
   useStore,
   useStores,
   withStore,
@@ -26,12 +58,15 @@ const {
     createContext: () => context,
     useCallback: (cb) => cb,
     useContext: () => context,
-    useState() {},
+    useEffect: (cb) => cb(),
+    useState: () => [undefined, () => {}],
   },
 });
 
 (async () => {
   await run('isEmpty', () => isEmpty(false));
+  await run('useLocalStore', () => useLocalStore('key', 'default'));
+  await run('useSessionStore', () => useSessionStore('key', 'default'));
   await run('useStore', () => useStore('key', 'default'));
   await run('useStores', () => useStores({ key1: 'value1' }));
   await run('withStore', () => withStore(Component));
