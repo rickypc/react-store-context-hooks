@@ -13,20 +13,22 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useState,
 } from 'react';
 
 /**
- * Provides various data store hooks that allow functional components within
- * the same React Context to share the application state.
+ * Provides various data store hooks that allow functional components to share
+ * the application state within the same React Context or different
+ * React Context using persistent storage.
  *
  * @module react-store-context-hooks
  * @requires react
  *
- * @example
+ * @example <caption>Within the same React Context</caption>
  * import { isEmpty, useStore, useStores, withStore } from 'react-store-context-hooks';
- * import { useEffect } from 'react';
  * import { render } from 'react-dom';
+ * import { useEffect } from 'react';
  *
  * const ComponentA = () => {
  *   const [value, setValue, delValue] = useStore('key');
@@ -78,22 +80,56 @@ import React, {
  * });
  *
  * render(<App />, document.querySelector('#root'));
+ *
+ * @example <caption>Different React Context</caption>
+ * import { render } from 'react-dom';
+ * import { useEffect } from 'react';
+ * import { useLocalStore }  from 'react-store-context-hooks';
+ *
+ * // Simulate an existing value
+ * localStorage.setItem('key', JSON.stringify('local-default'));
+ *
+ * const ComponentA = () => {
+ *   const [value, setValue, delValue] = useLocalStore('key', 'default');
+ *
+ *   useEffect(() => {
+ *     setValue('value');
+ *     return () => delValue();
+ *   }, []);
+ *
+ *   return <>{JSON.stringify(value)}<>;
+ * };
+ *
+ * const ComponentB = () => {
+ *   const [value] = useLocalStore('key');
+ *   return <>{JSON.stringify(value)}<>;
+ * };
+ *
+ * const ComponentC = () => {
+ *   const [value] = useLocalStore('key');
+ *   return <>{JSON.stringify(value)}<>;
+ * };
+ *
+ * render(<><ComponentA /><ComponentB /><ComponentC /></>, document.querySelector('#root'));
  */
+const parseJson = (text: string, defaultValue: mixed) => {
+  let value: mixed;
+
+  try {
+    value = JSON.parse<mixed>(text);
+  } catch (_) {
+    // no-op.
+  }
+
+  return value === undefined ? defaultValue : value;
+};
 
 const storage = {
   get: (persistence: Storage, key: string, defaultValue: mixed) => {
     if (!(persistence instanceof Storage)) {
       return defaultValue;
     }
-
-    let value: mixed;
-    try {
-      value = JSON.parse<mixed>(persistence.getItem(key) || 'undefined');
-    } catch (_) {
-      // no-op.
-    }
-
-    return value === undefined ? defaultValue : value;
+    return parseJson(persistence.getItem(key) || 'undefined', defaultValue);
   },
   remove: (persistence: Storage, key: string) => {
     if (persistence instanceof Storage && persistence.getItem(key) !== null) {
@@ -114,6 +150,7 @@ const storage = {
   },
 };
 
+// After storage assignment.
 const createStore = () => {
   const [store, setStore] = useState<{[string]: mixed}>({});
   return {
@@ -153,7 +190,7 @@ const createStore = () => {
 };
 
 /**
- * A data store hook that allows a functional component to validate given value
+ * A data store hook allows a functional component to validate given value
  * emptiness.
  *
  * @alias module:react-store-context-hooks.isEmpty
@@ -174,8 +211,179 @@ export const isEmpty = (value: mixed): boolean => value == null
 
 const StoreContext = createContext({});
 
+const useStorage = (persistence: Storage, key: string, defaultValue: mixed) => {
+  const name = persistence === localStorage ? 'local' : 'session';
+  const [val, set] = useState(storage.get(persistence, key, defaultValue));
+
+  useEffect(() => {
+    const removeItem = (e: Event & { detail: StorageDetail }): void => {
+      if (e.detail.key === key) {
+        set(undefined);
+      }
+    };
+
+    const setItem = (e: Event & { detail: StorageDetail }): void => {
+      if (e.detail.key === key) {
+        set(e.detail.value);
+      }
+    };
+
+    document.addEventListener(`${name}Storage.removeItem`, removeItem);
+    document.addEventListener(`${name}Storage.setItem`, setItem);
+
+    return (): void => {
+      document.removeEventListener(`${name}Storage.removeItem`, removeItem);
+      document.removeEventListener(`${name}Storage.setItem`, setItem);
+    };
+  }, []);
+
+  return [
+    val,
+    useCallback((value: mixed) => {
+      if (storage.set(persistence, key, value)) {
+        document.dispatchEvent(new CustomEvent(`${name}Storage.setItem`, {
+          detail: { key, value },
+        }));
+      }
+    }, []),
+    useCallback(() => {
+      if (storage.remove(persistence, key)) {
+        document.dispatchEvent(new CustomEvent(`${name}Storage.removeItem`, {
+          detail: { key },
+        }));
+      }
+    }, []),
+  ];
+};
+
 /**
- * A data store hook that allows any components within the same React Context
+ * A data store hook allows any components on different React Context to share
+ * the application state using localStorage as the persistent storage.
+ *
+ * The mutator will persist the value with JSON string format in the
+ * persistent storage.
+ *
+ * @alias module:react-store-context-hooks.useLocalStore
+ * @method
+ * @param {string} key The store key.
+ * @param {mixed} defaultValue The store default value.
+ * @returns {Array.<mixed, function(value): void, function(): void>}
+ *          Store value, update, and remove callbacks.
+ *
+ * @example
+ * import { useEffect } from 'react';
+ * import { useLocalStore }  from 'react-store-context-hooks';
+ *
+ * // Simulate an existing value
+ * localStorage.setItem('key', JSON.stringify('local-default'));
+ *
+ * const ComponentA = () => {
+ *   const [value, setValue, delValue] = useLocalStore('key', 'default');
+ *   // value = 'local-default'
+ *   // localStorage.getItem('key') = '"local-default"'
+ *
+ *   useEffect(() => {
+ *     setValue('value');
+ *     // value = 'value'
+ *     // localStorage.getItem('key') = '"value"'
+ *
+ *     return () => {
+ *       delValue();
+ *       // value = 'default'
+ *       // localStorage.getItem('key') = null
+ *     };
+ *   }, []);
+ *
+ *   return null;
+ * };
+ *
+ * const ComponentB = () => {
+ *   const [value] = useLocalStore('key');
+ *   // value = 'local-default'
+ *   // localStorage.getItem('key') = '"local-default"'
+ *
+ *   // After ComponentA setValue('value');
+ *   // value = 'value'
+ *   // localStorage.getItem('key') = '"value"'
+ *
+ *   // After ComponentA delValue();
+ *   // value = undefined
+ *   // localStorage.getItem('key') = null
+ *
+ *   return null;
+ * };
+ */
+export const useLocalStore = (key: string, defaultValue: mixed): Array<mixed> => useStorage(
+  localStorage,
+  key,
+  defaultValue,
+);
+
+/**
+ * A data store hook allows any components on different React Context to share
+ * the application state using sessionStorage as the persistent storage.
+ *
+ * The mutator will persist the value with JSON string format in the
+ * persistent storage.
+ *
+ * @alias module:react-store-context-hooks.useSessionStore
+ * @method
+ * @param {string} key The store key.
+ * @param {mixed} defaultValue The store default value.
+ * @returns {Array.<mixed, function(value): void, function(): void>}
+ *          Store value, update, and remove callbacks.
+ *
+ * @example
+ * import { useEffect } from 'react';
+ * import { useSessionStore }  from 'react-store-context-hooks';
+ *
+ * // Simulate an existing value
+ * sessionStorage.setItem('key', JSON.stringify('session-default'));
+ *
+ * const ComponentA = () => {
+ *   const [value, setValue, delValue] = useSessionStore('key', 'default');
+ *   // value = 'session-default'
+ *   // sessionStorage.getItem('key') = '"session-default"'
+ *
+ *   useEffect(() => {
+ *     setValue('value');
+ *     // value = 'value'
+ *     // sessionStorage.getItem('key') = '"value"'
+ *
+ *     return () => {
+ *       delValue();
+ *       // value = 'default'
+ *       // sessionStorage.getItem('key') = null
+ *     };
+ *   }, []);
+ *
+ *   return null;
+ * };
+ *
+ * const ComponentB = () => {
+ *   const [value] = useSessionStore('key');
+ *   // value = 'session-default'
+ *   // sessionStorage.getItem('key') = '"session-default"'
+ *
+ *   // After ComponentA setValue('value');
+ *   // value = 'value'
+ *   // sessionStorage.getItem('key') = '"value"'
+ *
+ *   // After ComponentA delValue();
+ *   // value = undefined
+ *   // sessionStorage.getItem('key') = null
+ *
+ *   return null;
+ * };
+ */
+export const useSessionStore = (key: string, defaultValue: mixed): Array<mixed> => useStorage(
+  sessionStorage,
+  key,
+  defaultValue,
+);
+
+/**
+ * A data store hook allows any components within the same React Context
  * to share the application state.
  *
  * The accessor will validate the value in the data store first before
@@ -198,18 +406,20 @@ const StoreContext = createContext({});
  * import { useStore }  from 'react-store-context-hooks';
  *
  * const Component = () => {
- *   const [store, setStore, delStore] = useStore('key', 'default');
- *   // store = 'default'
+ *   const [value, setValue, delValue] = useStore('key', 'default');
+ *   // value = 'default'
  *
  *   useEffect(() => {
- *     setStore('value');
- *     // store = 'value'
+ *     setValue('value');
+ *     // value = 'value'
  *
  *     return () => {
- *       delStore();
- *       // store = 'default'
+ *       delValue();
+ *       // value = 'default'
  *     };
  *   }, []);
+ *
+ *   return null;
  * };
  *
  * @example <caption>With localStorage</caption>
@@ -220,21 +430,23 @@ const StoreContext = createContext({});
  * localStorage.setItem('key', JSON.stringify('local-default'));
  *
  * const Component = () => {
- *   const [store, setStore, delStore] = useStore('key', 'default', localStorage);
- *   // store = 'local-default'
+ *   const [value, setValue, delValue] = useStore('key', 'default', localStorage);
+ *   // value = 'local-default'
  *   // localStorage.getItem('key') = '"local-default"'
  *
  *   useEffect(() => {
- *     setStore('value');
- *     // store = 'value'
+ *     setValue('value');
+ *     // value = 'value'
  *     // localStorage.getItem('key') = '"value"'
  *
  *     return () => {
- *       delStore();
- *       // store = 'default'
+ *       delValue();
+ *       // value = 'default'
  *       // localStorage.getItem('key') = null
  *     };
  *   }, []);
+ *
+ *   return null;
  * };
  *
  * @example <caption>With sessionStorage</caption>
@@ -245,21 +457,23 @@ const StoreContext = createContext({});
  * sessionStorage.setItem('key', JSON.stringify('session-default'));
  *
  * const Component = () => {
- *   const [store, setStore, delStore] = useStore('key', 'default', sessionStorage);
- *   // store = 'session-default'
+ *   const [value, setValue, delValue] = useStore('key', 'default', sessionStorage);
+ *   // value = 'session-default'
  *   // sessionStorage.getItem('key') = '"session-default"'
  *
  *   useEffect(() => {
- *     setStore('value');
- *     // store = 'value'
+ *     setValue('value');
+ *     // value = 'value'
  *     // sessionStorage.getItem('key') = '"value"'
  *
  *     return () => {
- *       delStore();
- *       // store = 'default'
+ *       delValue();
+ *       // value = 'default'
  *       // sessionStorage.getItem('key') = null
  *     };
  *   }, []);
+ *
+ *   return null;
  * };
  */
 export const useStore = (key: string, defaultValue: mixed, persistence: Storage): Array<mixed> => {
@@ -272,8 +486,8 @@ export const useStore = (key: string, defaultValue: mixed, persistence: Storage)
 };
 
 /**
- * A data store hook that allows a functional component to update multiple
- * stores at once and share the application state with any components within
+ * A data store hook allows a functional component to update multiple stores
+ * at once and share the application state with any components within
  * the same React Context.
  *
  * The mutator will persist the values with JSON string format
@@ -289,12 +503,12 @@ export const useStore = (key: string, defaultValue: mixed, persistence: Storage)
  * import { useStore }  from 'react-store-context-hooks';
  *
  * const Component = () => {
- *   const [store1] = useStore('key1');
- *   const [store2] = useStore('key2');
+ *   const [value1] = useStore('key1');
+ *   const [value2] = useStore('key2');
  *   const { setStores } = useStores();
  *
  *   useEffect(() => {
- *     setStore({
+ *     setStores({
  *       key1: 'value1',
  *       key2: {
  *         nested: 'value',
@@ -302,12 +516,12 @@ export const useStore = (key: string, defaultValue: mixed, persistence: Storage)
  *     });
  *   }, []);
  *
- *   // store1 = 'value1'
- *   // store2 = {
+ *   // value1 = 'value1'
+ *   // value2 = {
  *   //   nested: 'value',
  *   // }
  *
- *   return <>{JSON.stringify({ store1, store2 })}</>;
+ *   return <>{JSON.stringify({ value1, value2 })}</>;
  * };
  *
  * @example <caption>With localStorage</caption>
@@ -315,12 +529,12 @@ export const useStore = (key: string, defaultValue: mixed, persistence: Storage)
  * import { useStore }  from 'react-store-context-hooks';
  *
  * const Component = () => {
- *   const [store1] = useStore('key1', undefined, localStorage);
- *   const [store2] = useStore('key2', undefined, localStorage);
+ *   const [value1] = useStore('key1', undefined, localStorage);
+ *   const [value2] = useStore('key2', undefined, localStorage);
  *   const { setStores } = useStores(localStorage);
  *
  *   useEffect(() => {
- *     setStore({
+ *     setStores({
  *       key1: 'value1',
  *       key2: {
  *         nested: 'value',
@@ -328,14 +542,14 @@ export const useStore = (key: string, defaultValue: mixed, persistence: Storage)
  *     });
  *   }, []);
  *
- *   // store1 = 'value1'
- *   // store2 = {
+ *   // value1 = 'value1'
+ *   // value2 = {
  *   //   nested: 'value',
  *   // }
  *   // localStorage.getItem('key1') = '"value1"'
  *   // localStorage.getItem('key2') = '{"nested":"value"}'
  *
- *   return <>{JSON.stringify({ store1, store2 })}</>;
+ *   return <>{JSON.stringify({ value1, value2 })}</>;
  * };
  *
  * @example <caption>With sessionStorage</caption>
@@ -343,12 +557,12 @@ export const useStore = (key: string, defaultValue: mixed, persistence: Storage)
  * import { useStore }  from 'react-store-context-hooks';
  *
  * const Component = () => {
- *   const [store1] = useStore('key1', undefined, sessionStorage);
- *   const [store2] = useStore('key2', undefined, sessionStorage);
+ *   const [value1] = useStore('key1', undefined, sessionStorage);
+ *   const [value2] = useStore('key2', undefined, sessionStorage);
  *   const { setStores } = useStores(sessionStorage);
  *
  *   useEffect(() => {
- *     setStore({
+ *     setStores({
  *       key1: 'value1',
  *       key2: {
  *         nested: 'value',
@@ -356,14 +570,14 @@ export const useStore = (key: string, defaultValue: mixed, persistence: Storage)
  *     });
  *   }, []);
  *
- *   // store1 = 'value1'
- *   // store2 = {
+ *   // value1 = 'value1'
+ *   // value2 = {
  *   //   nested: 'value',
  *   // }
  *   // sessionStorage.getItem('key1') = '"value1"'
  *   // sessionStorage.getItem('key2') = '{"nested":"value"}'
  *
- *   return <>{JSON.stringify({ store1, store2 })}</>;
+ *   return <>{JSON.stringify({ value1, value2 })}</>;
  * };
  */
 export const useStores = (persistence: Storage): {} => {
@@ -375,7 +589,7 @@ export const useStores = (persistence: Storage): {} => {
 };
 
 /**
- * A data store hook that wraps a component with a store context provider.
+ * A data store hook wraps a component with a store context provider.
  *
  * @alias module:react-store-context-hooks.withStores
  * @method
