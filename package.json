@@ -13,7 +13,7 @@
       "@babel/react"
     ]
   },
-  "description": "Provides various data store hooks that allow functional components within the same React Context to share the application state.",
+  "description": "Provides various data store hooks that allow functional components to share the application state within the same React Context or different React Context using persistent storage.",
   "devDependencies": {
     "@airbnb/node-memwatch": "^2.0.0",
     "@babel/core": "^7.16.0",
@@ -41,7 +41,7 @@
     "proxyquire": "^2.1.3",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "rollup": "^2.58.3",
+    "rollup": "^2.59.0",
     "rollup-plugin-copy": "^3.4.0",
     "rollup-plugin-delete": "^2.0.0",
     "rollup-plugin-terser": "^7.0.2",
@@ -51,6 +51,7 @@
   },
   "eslintConfig": {
     "env": {
+      "browser": true,
       "jest/globals": true,
       "node": true
     },
@@ -94,15 +95,29 @@
         }
       ],
       "import/no-unresolved": [
-        2,
+        "error",
         {
           "ignore": [
             "react"
           ]
         }
       ],
+      "no-bitwise": [
+        "error",
+        {
+          "allow": [
+            "~"
+          ]
+        }
+      ],
+      "no-param-reassign": [
+        "error",
+        {
+          "props": false
+        }
+      ],
       "no-underscore-dangle": [
-        2,
+        "error",
         {
           "allow": [
             "__test__"
@@ -153,7 +168,7 @@
   "module": "index.esm.js",
   "name": "react-store-context-hooks",
   "optionalDependencies": {
-    "@babel/standalone": "^7.16.1"
+    "@babel/standalone": "^7.16.2"
   },
   "peerDependencies": {
     "react": ">=16.8.0"
@@ -175,5 +190,5 @@
     "test:lint": "eslint __*__/** src/*.js; exit 0",
     "test:unit": "jest"
   },
-  "version": "2.0.0"
+  "version": "3.0.0"
 }
