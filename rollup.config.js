@@ -29,9 +29,11 @@ const writePackage = (json, to) => ({
       devDependencies,
       eslintConfig,
       jest,
+      optionalDependencies,
       scripts,
       ...output
     } = json;
+    // Short circuit with assignment above.
     delete output.babel;
     fs.writeFileSync(path.resolve(to), JSON.stringify(output));
   },
