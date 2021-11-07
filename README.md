@@ -60,7 +60,7 @@ const ComponentA = () => {
     return () => delValue();
   }, []);
 
-  return <>{JSON.stringify(value)}<>;
+  return <>{JSON.stringify(value)}</>;
 };
 
 const ComponentB = () => {
@@ -75,7 +75,7 @@ const ComponentB = () => {
     return () => delValue();
   }, []);
 
-  return <>{JSON.stringify(value)}<>;
+  return <>{JSON.stringify(value)}</>;
 };
 
 const App = withStore(() => {
@@ -99,34 +99,62 @@ const App = withStore(() => {
 
 render(<App />, document.querySelector('#root'));
 ```
-**Example** *(Different React Context)*  
+**Example** *(Different React Context with localStorage)*  
 ```js
 import { render } from 'react-dom';
 import { useEffect } from 'react';
-import { useLocalStore }  from 'react-store-context-hooks';
-
-// Simulate an existing value
-localStorage.setItem('key', JSON.stringify('local-default'));
+import { useLocalStore, useLocalStores }  from 'react-store-context-hooks';
 
 const ComponentA = () => {
-  const [value, setValue, delValue] = useLocalStore('key', 'default');
+  const { setStores } = useLocalStores();
 
   useEffect(() => {
-    setValue('value');
-    return () => delValue();
+    setStores({
+      key: 'value',
+    });
   }, []);
 
-  return <>{JSON.stringify(value)}<>;
+  return null;
 };
 
 const ComponentB = () => {
   const [value] = useLocalStore('key');
-  return <>{JSON.stringify(value)}<>;
+  return <>{JSON.stringify(value)}</>;
 };
 
 const ComponentC = () => {
   const [value] = useLocalStore('key');
-  return <>{JSON.stringify(value)}<>;
+  return <>{JSON.stringify(value)}</>;
+};
+
+render(<><ComponentA /><ComponentB /><ComponentC /></>, document.querySelector('#root'));
+```
+**Example** *(Different React Context with sessionStorage)*  
+```js
+import { render } from 'react-dom';
+import { useEffect } from 'react';
+import { useSessionStore, useSessionStores }  from 'react-store-context-hooks';
+
+const ComponentA = () => {
+  const { setStores } = useSessionStores();
+
+  useEffect(() => {
+    setStores({
+      key: 'value',
+    });
+  }, []);
+
+  return null;
+};
+
+const ComponentB = () => {
+  const [value] = useSessionStore('key');
+  return <>{JSON.stringify(value)}</>;
+};
+
+const ComponentC = () => {
+  const [value] = useSessionStore('key');
+  return <>{JSON.stringify(value)}</>;
 };
 
 render(<><ComponentA /><ComponentB /><ComponentC /></>, document.querySelector('#root'));
@@ -135,7 +163,9 @@ render(<><ComponentA /><ComponentB /><ComponentC /></>, document.querySelector('
 * [react-store-context-hooks](#module_react-store-context-hooks)
     * [.isEmpty(value)](#module_react-store-context-hooks.isEmpty) ⇒ <code>boolean</code>
     * [.useLocalStore(key, defaultValue)](#module_react-store-context-hooks.useLocalStore) ⇒ <code>Array.&lt;mixed, function(value): void, function(): void&gt;</code>
+    * [.useLocalStores()](#module_react-store-context-hooks.useLocalStores) ⇒ <code>Object.&lt;{setStores: function(data): void}&gt;</code>
     * [.useSessionStore(key, defaultValue)](#module_react-store-context-hooks.useSessionStore) ⇒ <code>Array.&lt;mixed, function(value): void, function(): void&gt;</code>
+    * [.useSessionStores()](#module_react-store-context-hooks.useSessionStores) ⇒ <code>Object.&lt;{setStores: function(data): void}&gt;</code>
     * [.useStore(key, defaultValue, persistence)](#module_react-store-context-hooks.useStore) ⇒ <code>Array.&lt;mixed, function(value): void, function(): void&gt;</code>
     * [.useStores(persistence)](#module_react-store-context-hooks.useStores) ⇒ <code>Object.&lt;{setStores: function(data): void}&gt;</code>
     * [.withStores(Component)](#module_react-store-context-hooks.withStores) ⇒ <code>React.ComponentType</code>
@@ -155,6 +185,8 @@ emptiness.
 
 **Example**  
 ```js
+import { isEmpty } from 'react-store-context-hooks';
+
 let flag = isEmpty('');
 // flag = true
 flag = isEmpty('value');
@@ -221,6 +253,52 @@ const ComponentB = () => {
   return null;
 };
 ```
+<a name="module_react-store-context-hooks.useLocalStores"></a>
+
+### react-store-context-hooks.useLocalStores() ⇒ <code>Object.&lt;{setStores: function(data): void}&gt;</code>
+A data store hook allows any components on different React Context to update
+multiple stores at once and share the application state using localStorage as
+the persistent storage.
+
+The mutator will persist the values with JSON string format in the
+persistent storage.
+
+**Kind**: static method of [<code>react-store-context-hooks</code>](#module_react-store-context-hooks)  
+**Returns**: <code>Object.&lt;{setStores: function(data): void}&gt;</code> - Multiple stores update callback.  
+**Example**  
+```js
+import { useEffect } from 'react';
+import { useLocalStore, useLocalStores }  from 'react-store-context-hooks';
+
+const ComponentA = () => {
+  const { setStores } = useLocalStores();
+
+  useEffect(() => {
+    setStores({
+      key1: 'value1',
+      key2: {
+        nested: 'value',
+      },
+    });
+  }, []);
+
+  return null;
+};
+
+const ComponentB = () => {
+  const [value1] = useLocalStore('key1');
+  const [value2] = useLocalStore('key2');
+
+  // value1 = 'value1'
+  // value2 = {
+  //   nested: 'value',
+  // }
+  // localStorage.getItem('key1') = '"value1"'
+  // localStorage.getItem('key2') = '{"nested":"value"}'
+
+  return <>{JSON.stringify({ value1, value2 })}</>;
+};
+```
 <a name="module_react-store-context-hooks.useSessionStore"></a>
 
 ### react-store-context-hooks.useSessionStore(key, defaultValue) ⇒ <code>Array.&lt;mixed, function(value): void, function(): void&gt;</code>
@@ -280,6 +358,52 @@ const ComponentB = () => {
   // sessionStorage.getItem('key') = null
 
   return null;
+};
+```
+<a name="module_react-store-context-hooks.useSessionStores"></a>
+
+### react-store-context-hooks.useSessionStores() ⇒ <code>Object.&lt;{setStores: function(data): void}&gt;</code>
+A data store hook allows any components on different React Context to update
+multiple stores at once and share the application state using sessionStorage
+as the persistent storage.
+
+The mutator will persist the values with JSON string format in the
+persistent storage.
+
+**Kind**: static method of [<code>react-store-context-hooks</code>](#module_react-store-context-hooks)  
+**Returns**: <code>Object.&lt;{setStores: function(data): void}&gt;</code> - Multiple stores update callback.  
+**Example**  
+```js
+import { useEffect } from 'react';
+import { useSessionStore, useSessionStores }  from 'react-store-context-hooks';
+
+const ComponentA = () => {
+  const { setStores } = useSessionStores();
+
+  useEffect(() => {
+    setStores({
+      key1: 'value1',
+      key2: {
+        nested: 'value',
+      },
+    });
+  }, []);
+
+  return null;
+};
+
+const ComponentB = () => {
+  const [value1] = useSessionStore('key1');
+  const [value2] = useSessionStore('key2');
+
+  // value1 = 'value1'
+  // value2 = {
+  //   nested: 'value',
+  // }
+  // sessionStorage.getItem('key1') = '"value1"'
+  // sessionStorage.getItem('key2') = '{"nested":"value"}'
+
+  return <>{JSON.stringify({ value1, value2 })}</>;
 };
 ```
 <a name="module_react-store-context-hooks.useStore"></a>
@@ -402,7 +526,7 @@ in the persistent storage.
 **Example** *(Without persistent storage)*  
 ```js
 import { useEffect } from 'react';
-import { useStore }  from 'react-store-context-hooks';
+import { useStore, useStores }  from 'react-store-context-hooks';
 
 const Component = () => {
   const [value1] = useStore('key1');
@@ -429,7 +553,7 @@ const Component = () => {
 **Example** *(With localStorage)*  
 ```js
 import { useEffect } from 'react';
-import { useStore }  from 'react-store-context-hooks';
+import { useStore, useStores }  from 'react-store-context-hooks';
 
 const Component = () => {
   const [value1] = useStore('key1', undefined, localStorage);
@@ -458,7 +582,7 @@ const Component = () => {
 **Example** *(With sessionStorage)*  
 ```js
 import { useEffect } from 'react';
-import { useStore }  from 'react-store-context-hooks';
+import { useStore, useStores }  from 'react-store-context-hooks';
 
 const Component = () => {
   const [value1] = useStore('key1', undefined, sessionStorage);
