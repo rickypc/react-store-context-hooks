@@ -49,7 +49,9 @@ global.Storage = Storage;
 const {
   isEmpty,
   useLocalStore,
+  useLocalStores,
   useSessionStore,
+  useSessionStores,
   useStore,
   useStores,
   withStore,
@@ -66,7 +68,9 @@ const {
 (async () => {
   await run('isEmpty', () => isEmpty(false));
   await run('useLocalStore', () => useLocalStore('key', 'default'));
+  await run('useLocalStores', () => useLocalStores());
   await run('useSessionStore', () => useSessionStore('key', 'default'));
+  await run('useSessionStores', () => useSessionStores());
   await run('useStore', () => useStore('key', 'default'));
   await run('useStores', () => useStores({ key1: 'value1' }));
   await run('withStore', () => withStore(Component));
