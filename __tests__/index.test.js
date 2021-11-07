@@ -10,7 +10,9 @@ import React, { useMemo } from 'react';
 import {
   isEmpty,
   useLocalStore,
+  useLocalStores,
   useSessionStore,
+  useSessionStores,
   useStore,
   useStores,
   withStore,
@@ -534,6 +536,110 @@ describe('React store context hooks module test', () => {
     });
   });
 
+  describe('useLocalStores', () => {
+    it('should return expected value for undefined', () => {
+      const response = { rendered: 0 };
+      const value = { key: undefined };
+
+      const App = () => {
+        response.rendered += 1;
+        [response.get] = useLocalStore('key');
+        ({ setStores: response.sets } = useLocalStores());
+        return null;
+      };
+      render(<App />);
+
+      // Initial value check.
+      expect(localGet).toHaveBeenCalledTimes(1);
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localSet).not.toHaveBeenCalled();
+      expect(response.get).toBeUndefined();
+      expect(response.rendered).toEqual(1);
+      localGet.mockClear();
+
+      // Post-write value check.
+      act(() => response.sets(value));
+      expect(localGet).toHaveBeenCalledTimes(1);
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localSet).toHaveBeenCalledTimes(1);
+      expect(localSet).toHaveBeenNthCalledWith(1, 'key', undefined);
+      expect(response.get).toEqual(value.key);
+      expect(response.rendered).toEqual(1);
+      localGet.mockClear();
+      localSet.mockClear();
+
+      // Same value write check.
+      act(() => response.sets(value));
+      expect(localGet).toHaveBeenCalledTimes(1);
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localSet).toHaveBeenCalledTimes(1);
+      expect(localSet).toHaveBeenNthCalledWith(1, 'key', undefined);
+      expect(response.get).toEqual(value.key);
+      expect(response.rendered).toEqual(1);
+    });
+
+    it.each`
+      value
+      ${{ key: null }}
+      ${{ key: false }}
+      ${{ key: 0 }}
+      ${{ key: '' }}
+      ${{ key: [] }}
+      ${{ key: {} }}
+      ${{ key: true }}
+      ${{ key: 1 }}
+      ${{ key: -1 }}
+      ${{ key: 'string' }}
+      ${{ key: [1, 2, 3] }}
+      ${{ key: { 1: 2 } }}
+      ${{ key: { k: 'v' } }}
+    `('should return expected value for $value', ({ value }) => {
+      // Remove previous test value.
+      global.localStorage.removeItem('key');
+      localRemove.mockClear();
+
+      const response = { rendered: 0 };
+
+      const App = () => {
+        response.rendered += 1;
+        [response.get] = useLocalStore('key');
+        ({ setStores: response.sets } = useLocalStores());
+        return null;
+      };
+      render(<App />);
+
+      // Initial value check.
+      expect(localGet).toHaveBeenCalledTimes(1);
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localSet).not.toHaveBeenCalled();
+      expect(response.get).toBeUndefined();
+      expect(response.rendered).toEqual(1);
+      localGet.mockClear();
+
+      // Post-write value check.
+      act(() => response.sets(value));
+      expect(localGet).toHaveBeenCalledTimes(2);
+      // Write check.
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      // Render.
+      expect(localGet).toHaveBeenNthCalledWith(2, 'key');
+      expect(localSet).toHaveBeenCalledTimes(1);
+      expect(localSet).toHaveBeenNthCalledWith(1, 'key', JSON.stringify(value.key));
+      expect(response.get).toEqual(value.key);
+      expect(response.rendered).toEqual(2);
+      localGet.mockClear();
+      localSet.mockClear();
+
+      // Ignore same value write check.
+      act(() => response.sets(value));
+      expect(localGet).toHaveBeenCalledTimes(1);
+      expect(localGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(localSet).not.toHaveBeenCalled();
+      expect(response.get).toEqual(value.key);
+      expect(response.rendered).toEqual(2);
+    });
+  });
+
   describe('useSessionStore', () => {
     it('should return expected value for undefined', () => {
       // Remove previous test value.
@@ -1004,6 +1110,110 @@ describe('React store context hooks module test', () => {
       // Delete check.
       expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
       expect(sessionRemove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('useSessionStores', () => {
+    it('should return expected value for undefined', () => {
+      const response = { rendered: 0 };
+      const value = { key: undefined };
+
+      const App = () => {
+        response.rendered += 1;
+        [response.get] = useSessionStore('key');
+        ({ setStores: response.sets } = useSessionStores());
+        return null;
+      };
+      render(<App />);
+
+      // Initial value check.
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionSet).not.toHaveBeenCalled();
+      expect(response.get).toBeUndefined();
+      expect(response.rendered).toEqual(1);
+      sessionGet.mockClear();
+
+      // Post-write value check.
+      act(() => response.sets(value));
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionSet).toHaveBeenCalledTimes(1);
+      expect(sessionSet).toHaveBeenNthCalledWith(1, 'key', undefined);
+      expect(response.get).toEqual(value.key);
+      expect(response.rendered).toEqual(1);
+      sessionGet.mockClear();
+      sessionSet.mockClear();
+
+      // Same value write check.
+      act(() => response.sets(value));
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionSet).toHaveBeenCalledTimes(1);
+      expect(sessionSet).toHaveBeenNthCalledWith(1, 'key', undefined);
+      expect(response.get).toEqual(value.key);
+      expect(response.rendered).toEqual(1);
+    });
+
+    it.each`
+      value
+      ${{ key: null }}
+      ${{ key: false }}
+      ${{ key: 0 }}
+      ${{ key: '' }}
+      ${{ key: [] }}
+      ${{ key: {} }}
+      ${{ key: true }}
+      ${{ key: 1 }}
+      ${{ key: -1 }}
+      ${{ key: 'string' }}
+      ${{ key: [1, 2, 3] }}
+      ${{ key: { 1: 2 } }}
+      ${{ key: { k: 'v' } }}
+    `('should return expected value for $value', ({ value }) => {
+      // Remove previous test value.
+      global.sessionStorage.removeItem('key');
+      sessionRemove.mockClear();
+
+      const response = { rendered: 0 };
+
+      const App = () => {
+        response.rendered += 1;
+        [response.get] = useSessionStore('key');
+        ({ setStores: response.sets } = useSessionStores());
+        return null;
+      };
+      render(<App />);
+
+      // Initial value check.
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionSet).not.toHaveBeenCalled();
+      expect(response.get).toBeUndefined();
+      expect(response.rendered).toEqual(1);
+      sessionGet.mockClear();
+
+      // Post-write value check.
+      act(() => response.sets(value));
+      expect(sessionGet).toHaveBeenCalledTimes(2);
+      // Write check.
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      // Render.
+      expect(sessionGet).toHaveBeenNthCalledWith(2, 'key');
+      expect(sessionSet).toHaveBeenCalledTimes(1);
+      expect(sessionSet).toHaveBeenNthCalledWith(1, 'key', JSON.stringify(value.key));
+      expect(response.get).toEqual(value.key);
+      expect(response.rendered).toEqual(2);
+      sessionGet.mockClear();
+      sessionSet.mockClear();
+
+      // Ignore same value write check.
+      act(() => response.sets(value));
+      expect(sessionGet).toHaveBeenCalledTimes(1);
+      expect(sessionGet).toHaveBeenNthCalledWith(1, 'key');
+      expect(sessionSet).not.toHaveBeenCalled();
+      expect(response.get).toEqual(value.key);
+      expect(response.rendered).toEqual(2);
     });
   });
 
