@@ -1,3 +1,8 @@
+### 4.0.0 (2021.11.06)
+
+* Add useLocalStores and useSessionStores
+* Adjust documentation.
+
 ### 3.0.0 (2021.11.03)
 
 * Add useLocalStore and useSessionStore
