@@ -42,7 +42,7 @@ import React, {
  *     return () => delValue();
  *   }, []);
  *
- *   return <>{JSON.stringify(value)}<>;
+ *   return <>{JSON.stringify(value)}</>;
  * };
  *
  * const ComponentB = () => {
@@ -57,7 +57,7 @@ import React, {
  *     return () => delValue();
  *   }, []);
  *
- *   return <>{JSON.stringify(value)}<>;
+ *   return <>{JSON.stringify(value)}</>;
  * };
  *
  * const App = withStore(() => {
@@ -81,33 +81,60 @@ import React, {
  *
  * render(<App />, document.querySelector('#root'));
  *
- * @example <caption>Different React Context</caption>
+ * @example <caption>Different React Context with localStorage</caption>
  * import { render } from 'react-dom';
  * import { useEffect } from 'react';
- * import { useLocalStore }  from 'react-store-context-hooks';
- *
- * // Simulate an existing value
- * localStorage.setItem('key', JSON.stringify('local-default'));
+ * import { useLocalStore, useLocalStores }  from 'react-store-context-hooks';
  *
  * const ComponentA = () => {
- *   const [value, setValue, delValue] = useLocalStore('key', 'default');
+ *   const { setStores } = useLocalStores();
  *
  *   useEffect(() => {
- *     setValue('value');
- *     return () => delValue();
+ *     setStores({
+ *       key: 'value',
+ *     });
  *   }, []);
  *
- *   return <>{JSON.stringify(value)}<>;
+ *   return null;
  * };
  *
  * const ComponentB = () => {
  *   const [value] = useLocalStore('key');
- *   return <>{JSON.stringify(value)}<>;
+ *   return <>{JSON.stringify(value)}</>;
  * };
  *
  * const ComponentC = () => {
  *   const [value] = useLocalStore('key');
- *   return <>{JSON.stringify(value)}<>;
+ *   return <>{JSON.stringify(value)}</>;
+ * };
+ *
+ * render(<><ComponentA /><ComponentB /><ComponentC /></>, document.querySelector('#root'));
+ *
+ * @example <caption>Different React Context with sessionStorage</caption>
+ * import { render } from 'react-dom';
+ * import { useEffect } from 'react';
+ * import { useSessionStore, useSessionStores }  from 'react-store-context-hooks';
+ *
+ * const ComponentA = () => {
+ *   const { setStores } = useSessionStores();
+ *
+ *   useEffect(() => {
+ *     setStores({
+ *       key: 'value',
+ *     });
+ *   }, []);
+ *
+ *   return null;
+ * };
+ *
+ * const ComponentB = () => {
+ *   const [value] = useSessionStore('key');
+ *   return <>{JSON.stringify(value)}</>;
+ * };
+ *
+ * const ComponentC = () => {
+ *   const [value] = useSessionStore('key');
+ *   return <>{JSON.stringify(value)}</>;
  * };
  *
  * render(<><ComponentA /><ComponentB /><ComponentC /></>, document.querySelector('#root'));
@@ -149,16 +176,14 @@ const storage = {
     return false;
   },
   sets: (persistence: Storage, data: {[string]: mixed}) => {
-    if (persistence instanceof Storage) {
-      const name = persistence === localStorage ? 'local' : 'session';
-      Object.entries(data).forEach(([key, value]) => {
-        if (storage.set(persistence, key, value)) {
-          document.dispatchEvent(new CustomEvent(`${name}Storage.setItem`, {
-            detail: { key, value },
-          }));
-        }
-      });
-    }
+    const name = persistence === localStorage ? 'local' : 'session';
+    Object.entries(data).forEach(([key, value]) => {
+      if (storage.set(persistence, key, value)) {
+        document.dispatchEvent(new CustomEvent(`${name}Storage.setItem`, {
+          detail: { key, value },
+        }));
+      }
+    });
   },
 };
 
